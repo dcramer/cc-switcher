@@ -17,14 +17,7 @@ sealed class LinkPickerDialog : Form
         AutoSize = true;
         AutoSizeMode = AutoSizeMode.GrowAndShrink;
         Padding = new Padding(16);
-        try
-        {
-            Icon = Icon.ExtractAssociatedIcon(Environment.ProcessPath!);
-        }
-        catch (Exception)
-        {
-            // Cosmetic only.
-        }
+        Icon = IconFactory.App;
 
         var layout = new FlowLayoutPanel
         {

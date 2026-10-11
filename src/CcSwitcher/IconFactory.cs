@@ -10,17 +10,33 @@ namespace CcSwitcher;
 /// </summary>
 static class IconFactory
 {
+    // Muted to sit beside Claude's clay, which stays first: it is the color Claude's own icon is drawn in.
     public static readonly (string Name, string Hex)[] Palette =
     [
         ("Clay", "#D97757"),
-        ("Blue", "#3B82F6"),
-        ("Green", "#10B981"),
-        ("Purple", "#8B5CF6"),
-        ("Amber", "#F59E0B"),
-        ("Rose", "#F43F5E"),
-        ("Teal", "#14B8A6"),
-        ("Slate", "#64748B"),
+        ("Blue", "#6A9BCC"),
+        ("Green", "#7A9B63"),
+        ("Purple", "#9A84D0"),
+        ("Amber", "#D9A441"),
+        ("Rose", "#D4698C"),
+        ("Teal", "#4FA8A0"),
+        ("Slate", "#7D8794"),
     ];
+
+    // The brighter palette profiles were first offered, each mapped to the color that replaced it.
+    static readonly Dictionary<string, string> Retired = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["#3B82F6"] = "#6A9BCC",
+        ["#10B981"] = "#7A9B63",
+        ["#8B5CF6"] = "#9A84D0",
+        ["#F59E0B"] = "#D9A441",
+        ["#F43F5E"] = "#D4698C",
+        ["#14B8A6"] = "#4FA8A0",
+        ["#64748B"] = "#7D8794",
+    };
+
+    /// <summary>CC Switcher's own icon in every size it comes in, so each use gets the one drawn for it.</summary>
+    public static Icon App { get; } = new(typeof(IconFactory).Assembly.GetManifestResourceStream("app.ico")!);
 
     /// <summary>The color Claude's own icon is drawn in; a profile in this color keeps the icon as it is.</summary>
     static readonly Color StockColor = ColorTranslator.FromHtml(Palette[0].Hex);
@@ -43,6 +59,9 @@ static class IconFactory
         }
         return StockColor;
     }
+
+    /// <summary>A saved color as the palette has it today.</summary>
+    public static string Current(string hex) => Retired.GetValueOrDefault(hex, hex);
 
     public static bool IsStockColor(Profile profile) => ParseColor(profile.Color).ToArgb() == StockColor.ToArgb();
 

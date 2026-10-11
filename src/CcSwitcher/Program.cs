@@ -12,6 +12,7 @@ static class Program
     static int Main(string[] args)
     {
         ApplicationConfiguration.Initialize();
+        Application.SetColorMode(SystemColorMode.System);
         try
         {
             var settings = Settings.Load();

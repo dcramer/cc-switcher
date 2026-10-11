@@ -1,3 +1,5 @@
+<img src="docs/icon.png" width="96" align="right" alt="">
+
 # CC Switcher
 
 Run Claude Desktop under several accounts at once on Windows, such as work and personal, and
@@ -72,8 +74,8 @@ Requires the .NET 9 SDK on Windows.
 powershell -ExecutionPolicy Bypass -File build.ps1 -Install
 ```
 
-This builds `dist\cc-switcher.exe` and installs it for your user; without `-Install` it only
-builds. Every push to `main` is published as a release by `.github/workflows/build.yml`.
+This builds into `dist\` the same way releases are built and installs it for your user; without
+`-Install` it only builds. Every push to `main` is published as a release by `.github/workflows/build.yml`.
 
 ## License
 

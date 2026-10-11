@@ -22,6 +22,9 @@ PrivilegesRequired=lowest
 OutputDir=..\dist
 OutputBaseFilename=cc-switcher-setup
 SetupIconFile=..\src\CcSwitcher\app.ico
+; Both drawn by tools\make-icon.ps1.
+WizardImageFile=wizard.bmp
+WizardSmallImageFile=wizard-small.bmp
 UninstallDisplayName=CC Switcher
 UninstallDisplayIcon={app}\cc-switcher.exe
 Compression=lzma2

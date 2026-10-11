@@ -27,7 +27,7 @@ sealed class TrayContext : ApplicationContext
         };
         _tray = new NotifyIcon
         {
-            Icon = AppIcon(SystemInformation.SmallIconSize.Width),
+            Icon = new Icon(IconFactory.App, SystemInformation.SmallIconSize),
             Text = "CC Switcher",
             ContextMenuStrip = _menu,
             Visible = true,
@@ -107,7 +107,4 @@ sealed class TrayContext : ApplicationContext
         _settings.Save();
         _styler.ExpectWindow();
     }
-
-    static Icon AppIcon(int size) =>
-        IconFactory.Extract(Environment.ProcessPath!, size) ?? SystemIcons.Application;
 }

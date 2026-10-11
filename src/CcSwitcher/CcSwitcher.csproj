@@ -17,6 +17,13 @@
     <Description>Unofficial profile launcher for Claude Desktop</Description>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <DebugType>embedded</DebugType>
+    <!-- Dark mode (Application.SetColorMode) is still marked experimental in .NET 9. -->
+    <NoWarn>$(NoWarn);WFO5001</NoWarn>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Also as a resource: the icon Windows embeds in the exe can't be read back with all its sizes. -->
+    <EmbeddedResource Include="app.ico" LogicalName="app.ico" />
+  </ItemGroup>
 
 </Project>

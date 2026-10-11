@@ -7,18 +7,7 @@ sealed class MainForm : Form
 {
     readonly Settings _settings;
     readonly WindowStyler _styler;
-    readonly ListView _list = new()
-    {
-        Dock = DockStyle.Fill,
-        View = View.Details,
-        FullRowSelect = true,
-        MultiSelect = false,
-        HideSelection = false,
-        HeaderStyle = ColumnHeaderStyle.None,
-        BorderStyle = BorderStyle.FixedSingle,
-        Margin = new Padding(0, 0, 0, 8),
-    };
-    readonly ImageList _icons = new() { ColorDepth = ColorDepth.Depth32Bit };
+    readonly ProfileList _list = new();
     readonly Button _launch = MakeButton("Launch");
     readonly Button _add = MakeButton("Add…");
     readonly Button _edit = MakeButton("Edit…");
@@ -39,23 +28,10 @@ sealed class MainForm : Form
 
         SuspendLayout();
         Text = "CC Switcher";
-        ClientSize = new Size(460, 300);
-        MinimumSize = new Size(460, 280);
+        ClientSize = new Size(460, 340);
+        MinimumSize = new Size(460, 300);
         StartPosition = FormStartPosition.CenterScreen;
-        try
-        {
-            Icon = Icon.ExtractAssociatedIcon(Environment.ProcessPath!);
-        }
-        catch (Exception)
-        {
-            // Cosmetic only.
-        }
-
-        var iconSize = 28 * DeviceDpi / 96;
-        _icons.ImageSize = new Size(iconSize, iconSize);
-        _list.SmallImageList = _icons;
-        _list.Columns.Add("Profile");
-        _list.Columns.Add("Status");
+        Icon = IconFactory.App;
 
         var buttons = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0), WrapContents = false };
         buttons.Controls.AddRange([_launch, _add, _edit, _remove, _shortcut]);
@@ -75,7 +51,7 @@ sealed class MainForm : Form
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.Controls.Add(_list, 0, 0);
+        root.Controls.Add(_list.Framed(new Padding(0, 0, 0, 8)), 0, 0);
         root.Controls.Add(buttons, 0, 1);
         root.Controls.Add(linkRow, 0, 2);
         root.Controls.Add(_closeAfterLaunch, 0, 3);
@@ -99,8 +75,7 @@ sealed class MainForm : Form
         _list.ContextMenuStrip = listMenu;
 
         _list.SelectedIndexChanged += (_, _) => UpdateButtons();
-        _list.ItemActivate += (_, _) => LaunchSelected();
-        _list.Resize += (_, _) => SizeColumns();
+        _list.RowActivated += LaunchSelected;
         _list.KeyDown += (_, e) =>
         {
             if (e.KeyCode == Keys.Delete)
@@ -139,12 +114,12 @@ sealed class MainForm : Form
     string DefaultProfileName =>
         _settings.Profiles.FirstOrDefault(p => p.UsesDefaultData)?.Name ?? "Claude's default profile";
 
-    Profile? Selected => _list.SelectedItems.Count > 0 ? (Profile)_list.SelectedItems[0].Tag! : null;
+    Profile? Selected => _list.Selected;
 
     protected override void OnLoad(EventArgs e)
     {
         base.OnLoad(e);
-        SizeColumns();
+        _list.RevealSelection();
         _list.Select();
     }
 
@@ -156,22 +131,7 @@ sealed class MainForm : Form
 
     void ReloadList(string? selectId)
     {
-        _list.BeginUpdate();
-        _list.Items.Clear();
-        _icons.Images.Clear();
-        foreach (var profile in _settings.Profiles)
-        {
-            _icons.Images.Add(profile.Id, IconFactory.Render(_settings, _icons.ImageSize.Width, profile));
-            // A leading space keeps the name from touching its icon.
-            var item = new ListViewItem(" " + profile.Name, profile.Id) { Tag = profile, UseItemStyleForSubItems = false };
-            item.SubItems.Add("");
-            _list.Items.Add(item);
-            item.Selected = profile.Id == selectId;
-        }
-        if (_list.SelectedItems.Count == 0 && _list.Items.Count > 0)
-            _list.Items[0].Selected = true;
-        _list.EndUpdate();
-
+        _list.SetProfiles(_settings, selectId);
         RefreshStatus();
         RefreshLinkState(force: true);
         UpdateButtons();
@@ -179,30 +139,15 @@ sealed class MainForm : Form
 
     void RefreshStatus()
     {
-        foreach (ListViewItem item in _list.Items)
+        foreach (var profile in _settings.Profiles)
         {
-            var profile = (Profile)item.Tag!;
             var running = ClaudeApp.IsRunning(profile);
             var text = running ? "Running"
                 : profile.UsesDefaultData || Directory.Exists(profile.DataDir) ? ""
                 : "New";
-            var status = item.SubItems[1];
-            if (status.Text != text)
-            {
-                status.Text = text;
-                status.ForeColor = running ? Color.FromArgb(0x16, 0x7C, 0x3D) : SystemColors.GrayText;
-            }
+            _list.SetStatus(profile, text, running);
         }
         RefreshLinkState(force: false);
-    }
-
-    void SizeColumns()
-    {
-        if (_list.Columns.Count < 2)
-            return;
-        var statusWidth = 90 * DeviceDpi / 96;
-        _list.Columns[1].Width = statusWidth;
-        _list.Columns[0].Width = Math.Max(statusWidth, _list.ClientSize.Width - statusWidth);
     }
 
     void UpdateButtons()
