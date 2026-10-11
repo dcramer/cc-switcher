@@ -26,6 +26,10 @@ sealed class Profile
 
     [JsonIgnore]
     public string CodeConfigDir => Path.Combine(Folder, "claude-code");
+
+    /// <summary>The profile's tinted icon, used by its shortcuts and windows.</summary>
+    [JsonIgnore]
+    public string IconPath => Path.Combine(Settings.IconDir, Id + ".ico");
 }
 
 sealed class Settings
@@ -67,7 +71,11 @@ sealed class Settings
 
         try
         {
-            return JsonSerializer.Deserialize<Settings>(File.ReadAllText(FilePath), JsonOptions) ?? CreateInitial();
+            var settings = JsonSerializer.Deserialize<Settings>(File.ReadAllText(FilePath), JsonOptions) ?? CreateInitial();
+            // Hand-edited settings can leave a color out; drawing copes with that, so only real ones are brought up to date.
+            foreach (var profile in settings.Profiles.Where(p => p.Color is not null))
+                profile.Color = IconFactory.Current(profile.Color);
+            return settings;
         }
         catch (JsonException ex)
         {
@@ -123,7 +131,7 @@ sealed class Settings
         Profiles =
         [
             new Profile { Id = "personal", Name = "Personal", Color = "#D97757", UsesDefaultData = true },
-            new Profile { Id = "work", Name = "Work", Color = "#3B82F6" },
+            new Profile { Id = "work", Name = "Work", Color = "#6A9BCC" },
         ],
     };
 }

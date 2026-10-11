@@ -9,7 +9,7 @@ sealed class ProfileDialog : Form
 
     readonly Settings _settings;
     readonly Profile? _existing;
-    readonly TextBox _name = new() { Dock = DockStyle.Fill };
+    readonly TextBox _name = new() { Dock = DockStyle.Fill, BorderStyle = BorderStyle.FixedSingle };
     readonly FlowLayoutPanel _colors = new() { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0) };
     readonly CheckBox _separateConfig = new() { Text = "Also separate Claude Code settings and history", AutoSize = true };
 

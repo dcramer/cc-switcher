@@ -17,14 +17,7 @@ sealed class LinkPickerDialog : Form
         AutoSize = true;
         AutoSizeMode = AutoSizeMode.GrowAndShrink;
         Padding = new Padding(16);
-        try
-        {
-            Icon = Icon.ExtractAssociatedIcon(Environment.ProcessPath!);
-        }
-        catch (Exception)
-        {
-            // Cosmetic only.
-        }
+        Icon = IconFactory.App;
 
         var layout = new FlowLayoutPanel
         {
@@ -60,7 +53,7 @@ sealed class LinkPickerDialog : Form
             var button = new Button
             {
                 Text = "  " + profile.Name + (running.Contains(profile) ? "  (running)" : ""),
-                Image = IconFactory.Render(iconSize, profile),
+                Image = IconFactory.Render(settings, iconSize, profile),
                 ImageAlign = ContentAlignment.MiddleLeft,
                 TextAlign = ContentAlignment.MiddleLeft,
                 TextImageRelation = TextImageRelation.ImageBeforeText,

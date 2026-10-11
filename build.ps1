@@ -1,5 +1,8 @@
-# Builds cc-switcher.exe into dist\. With -Install, also copies it to
-# %LOCALAPPDATA%\Programs\cc-switcher and adds a Start menu shortcut.
+# Builds CC Switcher into dist\ the way release builds are made: self-contained, with the .NET
+# runtime alongside it. With -Install, also copies it to %LOCALAPPDATA%\Programs\cc-switcher and
+# adds a Start menu shortcut. That is the folder the release installer uses, so the two must lay
+# out the same files: a build that expects the machine's .NET, dropped among a release's bundled
+# runtime, confuses .NET's launcher into asking for a .NET download.
 #
 # From WSL:  powershell.exe -ExecutionPolicy Bypass -File "$(wslpath -w build.ps1)" -Install
 param(
@@ -10,9 +13,12 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $project = Join-Path $PSScriptRoot 'src\CcSwitcher\CcSwitcher.csproj'
-$built = Join-Path $PSScriptRoot 'dist\cc-switcher.exe'
+$dist = Join-Path $PSScriptRoot 'dist'
 $target = Join-Path $env:LOCALAPPDATA 'Programs\cc-switcher'
-$installed = Join-Path $target 'cc-switcher.exe'
+$exe = Join-Path $target 'cc-switcher.exe'
+# The app's own code; the rest of the folder is the runtime, which rarely changes.
+$built = Join-Path $dist 'cc-switcher.dll'
+$installed = Join-Path $target 'cc-switcher.dll'
 
 function Test-InsidePackage {
     Add-Type -Namespace CcSwitcherBuild -Name AppModel -MemberDefinition @'
@@ -25,7 +31,8 @@ public static extern int GetCurrentPackageFullName(ref int length, System.Text.S
 }
 
 if (-not $InstallOnly) {
-    dotnet publish $project -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o (Split-Path $built) --nologo
+    if (Test-Path $dist) { Remove-Item $dist -Recurse -Force }
+    dotnet publish $project -c Release -r win-x64 --self-contained true -o $dist --nologo
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
@@ -50,11 +57,11 @@ if (Test-InsidePackage) {
 }
 
 New-Item -ItemType Directory -Force -Path $target | Out-Null
-Copy-Item $built $installed -Force
+Copy-Item (Join-Path $dist '*') $target -Recurse -Force
 
 $shortcut = (New-Object -ComObject WScript.Shell).CreateShortcut(
     (Join-Path ([Environment]::GetFolderPath('Programs')) 'CC Switcher.lnk'))
-$shortcut.TargetPath = $installed
+$shortcut.TargetPath = $exe
 $shortcut.WorkingDirectory = $target
 $shortcut.Description = 'Open Claude Desktop with a chosen profile'
 $shortcut.Save()
