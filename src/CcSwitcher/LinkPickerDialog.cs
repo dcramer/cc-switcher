@@ -60,7 +60,7 @@ sealed class LinkPickerDialog : Form
             var button = new Button
             {
                 Text = "  " + profile.Name + (running.Contains(profile) ? "  (running)" : ""),
-                Image = IconFactory.Render(iconSize, profile),
+                Image = IconFactory.Render(settings, iconSize, profile),
                 ImageAlign = ContentAlignment.MiddleLeft,
                 TextAlign = ContentAlignment.MiddleLeft,
                 TextImageRelation = TextImageRelation.ImageBeforeText,

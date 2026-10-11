@@ -26,6 +26,17 @@ Open **CC Switcher** from the Start menu. It starts with two profiles:
 your original sign-in can be renamed but not removed). **Shortcut** puts a "Claude (Work)" icon
 on the desktop or Start menu that opens that profile directly.
 
+### Telling profiles apart
+
+A profile's color is how you recognize its Claude windows. Each one gets Claude's icon tinted to
+that color, its own button on the taskbar instead of a place in Claude's stack, and a thin
+border in the same color (Windows 11). A profile left in the first color, Claude's own clay,
+looks exactly like Claude always has.
+
+To keep this up, CC Switcher stays running in the notification area after you close its window.
+Right-click its icon there to launch a profile, or click it to bring the window back. **Exit**
+in that menu closes it for real and returns any open Claude windows to their normal look.
+
 ### Signing in to a second profile
 
 Google, SSO and emailed-link sign-in all finish by having your browser open a `claude://` link,
@@ -49,12 +60,17 @@ Everything lives in `%USERPROFILE%\.cc-switcher`:
 | `settings.json` | The profile list |
 | `profiles\<id>\data` | A profile's Claude sign-in and local data |
 | `profiles\<id>\claude-code` | Its Claude Code config, if you asked for a separate one |
-| `icons\` | Icons for profile shortcuts |
+| `icons\` | Each profile's tinted icon, for its shortcuts and windows |
 
 This is deliberately not under `AppData`. Claude Desktop is an MSIX package, and Windows
 redirects a packaged app's `AppData` writes into the package's private cache: a profile stored
 there would be invisible to CC Switcher and erased whenever Claude is reinstalled. Set
 `CC_SWITCHER_HOME` to use a different folder.
+
+Claude has no option for a window's icon or color, so CC Switcher sets them on Claude's windows
+from outside once they open: a taskbar ID of their own, a window icon and a border color. The
+icon is made from the one inside your installed Claude, so it follows Claude's artwork. Windows
+drops a window icon when the program that set it exits, which is why CC Switcher stays running.
 
 Profiles always have separate accounts, but Claude Code sessions started from any of them share
 the `.claude` folder in your user folder (settings, history, memory). Tick **Also separate
@@ -66,6 +82,7 @@ Claude Code settings and history** on a profile to give it its own via `CLAUDE_C
 cc-switcher                     Open the profile list
 cc-switcher --profile <name>    Open Claude with that profile
 cc-switcher --url <claude://…>  Open a Claude link in a profile
+cc-switcher --tray              Start in the notification area
 ```
 
 ## Building
@@ -92,7 +109,10 @@ the workflow run. Every push to `main` is also published as a GitHub release, ve
 
 - `--user-data-dir` is a Chromium switch that Claude doesn't document. A future Claude version
   could stop honoring it.
-- Windows groups every Claude window under one taskbar icon, so profiles look alike there.
+- Claude draws its own title bar, which can't be recolored from outside; the border is the only
+  color on the window itself.
+- A profile's windows only look different while CC Switcher is running. One opened while it
+  isn't looks like plain Claude until CC Switcher next starts.
 - Claude re-registers itself for `claude://` links each time it starts, which is why link
   routing has to be chosen in Windows Settings rather than set silently.
 

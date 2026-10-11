@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Text;
 using Microsoft.Win32;
 
 namespace CcSwitcher;
@@ -6,6 +8,8 @@ namespace CcSwitcher;
 /// <summary>Finds and launches Claude Desktop, one instance per profile.</summary>
 static class ClaudeApp
 {
+    const string PackagesKey = @"Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages";
+
     public static string? FindExecutable(Settings settings)
     {
         foreach (var candidate in ExecutableCandidates(settings))
@@ -27,6 +31,25 @@ static class ClaudeApp
         yield return Path.Combine(local, "AnthropicClaude", "claude.exe");
         // Whatever Claude last registered itself as for claude:// links.
         yield return ProtocolHandlerExecutable();
+    }
+
+    /// <summary>Files that may hold Claude's icon. The MSIX alias is a stub without one, so the real executable behind it is tried too.</summary>
+    public static IEnumerable<string> IconSources(Settings settings) =>
+        ExecutableCandidates(settings).Concat(PackagedExecutables()).Where(File.Exists)!;
+
+    static List<string> PackagedExecutables()
+    {
+        var found = new List<string>();
+        using var packages = Registry.CurrentUser.OpenSubKey(PackagesKey);
+        foreach (var name in packages?.GetSubKeyNames() ?? [])
+        {
+            if (!name.StartsWith("Claude_", StringComparison.OrdinalIgnoreCase))
+                continue;
+            using var package = packages!.OpenSubKey(name);
+            if (package?.GetValue("PackageRootFolder") is string root)
+                found.Add(Path.Combine(root, "app", "claude.exe"));
+        }
+        return found;
     }
 
     static string? ProtocolHandlerExecutable()
@@ -108,6 +131,83 @@ static class ClaudeApp
             yield return Path.Combine(package, "LocalCache", "Roaming", "Claude");
     }
 
+    /// <summary>Handles of the open Claude windows that have a taskbar button.</summary>
+    public static List<IntPtr> FindWindows()
+    {
+        var windows = new List<IntPtr>();
+        var className = new StringBuilder(64);
+        EnumWindows((window, _) =>
+        {
+            // Every Electron and Chrome window has this class, so the process is checked too (in ProfileOf).
+            if (IsWindowVisible(window)
+                && GetWindow(window, GW_OWNER) == IntPtr.Zero
+                && (GetWindowLong(window, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) == 0
+                && GetClassName(window, className, className.Capacity) > 0
+                && className.ToString() == "Chrome_WidgetWin_1")
+            {
+                windows.Add(window);
+            }
+            return true;
+        }, IntPtr.Zero);
+        return windows;
+    }
+
+    /// <summary>The id of the process that owns a window.</summary>
+    public static int ProcessOf(IntPtr window)
+    {
+        GetWindowThreadProcessId(window, out var processId);
+        return processId;
+    }
+
+    /// <summary>The profile a process is running, or null if it isn't Claude Desktop or uses a folder we don't manage.</summary>
+    public static Profile? ProfileOf(Settings settings, int processId)
+    {
+        var process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, processId);
+        if (process == IntPtr.Zero)
+            return null;
+        try
+        {
+            var path = new StringBuilder(1024);
+            var length = path.Capacity;
+            if (!QueryFullProcessImageName(process, 0, path, ref length)
+                || !Path.GetFileName(path.ToString()).Equals("claude.exe", StringComparison.OrdinalIgnoreCase)
+                || CommandLine(process) is not { } commandLine)
+            {
+                return null;
+            }
+
+            // The same switch Launch passes; without it Claude is using its default folder.
+            const string dataDirSwitch = "--user-data-dir=";
+            return commandLine.Contains(dataDirSwitch, StringComparison.OrdinalIgnoreCase)
+                ? settings.Profiles.FirstOrDefault(p => !p.UsesDefaultData && commandLine.Contains(dataDirSwitch + p.DataDir, StringComparison.OrdinalIgnoreCase))
+                : settings.Profiles.FirstOrDefault(p => p.UsesDefaultData);
+        }
+        finally
+        {
+            CloseHandle(process);
+        }
+    }
+
+    static string? CommandLine(IntPtr process)
+    {
+        NtQueryInformationProcess(process, ProcessCommandLineInformation, IntPtr.Zero, 0, out var size);
+        if (size <= 0)
+            return null;
+
+        var buffer = Marshal.AllocHGlobal(size);
+        try
+        {
+            if (NtQueryInformationProcess(process, ProcessCommandLineInformation, buffer, size, out _) != 0)
+                return null;
+            var text = Marshal.PtrToStructure<UnicodeString>(buffer);
+            return Marshal.PtrToStringUni(text.Buffer, text.Length / 2);
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
+        }
+    }
+
     static string[] SafeDirectories(string parent, string pattern)
     {
         try
@@ -140,4 +240,50 @@ static class ClaudeApp
             return true;
         }
     }
+
+    const uint GW_OWNER = 4;
+    const int GWL_EXSTYLE = -20;
+    const int WS_EX_TOOLWINDOW = 0x80;
+    const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
+    const int ProcessCommandLineInformation = 60;
+
+    delegate bool EnumWindowsProc(IntPtr window, IntPtr parameter);
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct UnicodeString
+    {
+        public ushort Length;
+        public ushort MaximumLength;
+        public IntPtr Buffer;
+    }
+
+    [DllImport("user32.dll")]
+    static extern bool EnumWindows(EnumWindowsProc callback, IntPtr parameter);
+
+    [DllImport("user32.dll")]
+    static extern bool IsWindowVisible(IntPtr window);
+
+    [DllImport("user32.dll")]
+    static extern IntPtr GetWindow(IntPtr window, uint relation);
+
+    [DllImport("user32.dll")]
+    static extern int GetWindowLong(IntPtr window, int index);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    static extern int GetClassName(IntPtr window, StringBuilder name, int capacity);
+
+    [DllImport("user32.dll")]
+    static extern uint GetWindowThreadProcessId(IntPtr window, out int processId);
+
+    [DllImport("kernel32.dll")]
+    static extern IntPtr OpenProcess(uint access, bool inherit, int processId);
+
+    [DllImport("kernel32.dll")]
+    static extern bool CloseHandle(IntPtr handle);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    static extern bool QueryFullProcessImageName(IntPtr process, uint flags, StringBuilder path, ref int length);
+
+    [DllImport("ntdll.dll")]
+    static extern int NtQueryInformationProcess(IntPtr process, int informationClass, IntPtr buffer, int size, out int needed);
 }

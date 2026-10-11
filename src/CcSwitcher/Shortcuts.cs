@@ -6,13 +6,12 @@ static class Shortcuts
         [Environment.SpecialFolder.DesktopDirectory, Environment.SpecialFolder.Programs];
 
     /// <summary>Creates a "Claude (Name)" shortcut that opens the profile directly.</summary>
-    public static string Create(Profile profile, Environment.SpecialFolder folder)
+    public static string Create(Settings settings, Profile profile, Environment.SpecialFolder folder)
     {
         var exe = Environment.ProcessPath
             ?? throw new InvalidOperationException("Couldn't determine where CC Switcher is running from.");
 
-        var icon = IconPath(profile);
-        IconFactory.WriteIco(icon, profile);
+        IconFactory.WriteIco(settings, profile.IconPath, profile);
 
         var name = string.Concat(profile.Name.Split(Path.GetInvalidFileNameChars())).Trim();
         var path = Path.Combine(Environment.GetFolderPath(folder), $"Claude ({name}).lnk");
@@ -21,7 +20,7 @@ static class Shortcuts
         shortcut.TargetPath = exe;
         shortcut.Arguments = Arguments(profile);
         shortcut.WorkingDirectory = Path.GetDirectoryName(exe);
-        shortcut.IconLocation = icon + ",0";
+        shortcut.IconLocation = profile.IconPath + ",0";
         shortcut.Description = $"Open Claude with the {profile.Name} profile";
         shortcut.Save();
         return path;
@@ -43,7 +42,7 @@ static class Shortcuts
                         File.Delete(path);
                 }
             }
-            File.Delete(IconPath(profile));
+            File.Delete(profile.IconPath);
         }
         catch (Exception)
         {
@@ -51,9 +50,10 @@ static class Shortcuts
         }
     }
 
-    static string Arguments(Profile profile) => $"--profile \"{profile.Id}\"";
+    /// <summary>What a profile's shortcuts and taskbar button are called.</summary>
+    public static string DisplayName(Profile profile) => $"Claude ({profile.Name})";
 
-    static string IconPath(Profile profile) => Path.Combine(Settings.IconDir, profile.Id + ".ico");
+    public static string Arguments(Profile profile) => $"--profile \"{profile.Id}\"";
 
     static dynamic Shell()
     {

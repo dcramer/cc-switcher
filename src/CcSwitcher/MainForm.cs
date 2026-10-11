@@ -6,6 +6,7 @@ namespace CcSwitcher;
 sealed class MainForm : Form
 {
     readonly Settings _settings;
+    readonly WindowStyler _styler;
     readonly ListView _list = new()
     {
         Dock = DockStyle.Fill,
@@ -31,9 +32,10 @@ sealed class MainForm : Form
     readonly System.Windows.Forms.Timer _refreshTimer = new() { Interval = 2000 };
     LinkRouter.State _linkState;
 
-    public MainForm(Settings settings)
+    public MainForm(Settings settings, WindowStyler styler)
     {
         _settings = settings;
+        _styler = styler;
 
         SuspendLayout();
         Text = "CC Switcher";
@@ -159,7 +161,7 @@ sealed class MainForm : Form
         _icons.Images.Clear();
         foreach (var profile in _settings.Profiles)
         {
-            _icons.Images.Add(profile.Id, IconFactory.Render(_icons.ImageSize.Width, profile));
+            _icons.Images.Add(profile.Id, IconFactory.Render(_settings, _icons.ImageSize.Width, profile));
             // A leading space keeps the name from touching its icon.
             var item = new ListViewItem(" " + profile.Name, profile.Id) { Tag = profile, UseItemStyleForSubItems = false };
             item.SubItems.Add("");
@@ -231,6 +233,7 @@ sealed class MainForm : Form
 
         _settings.LastProfileId = profile.Id;
         _settings.Save();
+        _styler.ExpectWindow();
         if (_settings.CloseAfterLaunch)
             Close();
         else
@@ -269,6 +272,7 @@ sealed class MainForm : Form
         profile.Color = dialog.ProfileColor;
         profile.SeparateCodeConfig = dialog.SeparateCodeConfig;
         _settings.Save();
+        _styler.Refresh();
         ReloadList(profile.Id);
     }
 
@@ -314,6 +318,7 @@ sealed class MainForm : Form
         if (_settings.LastProfileId == profile.Id)
             _settings.LastProfileId = null;
         _settings.Save();
+        _styler.Refresh();
         ReloadList(null);
     }
 
@@ -335,7 +340,7 @@ sealed class MainForm : Form
             return;
         try
         {
-            var path = Shortcuts.Create(profile, folder);
+            var path = Shortcuts.Create(_settings, profile, folder);
             MessageBox.Show(this, $"Created \"{Path.GetFileNameWithoutExtension(path)}\". It opens Claude straight into this profile.", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)

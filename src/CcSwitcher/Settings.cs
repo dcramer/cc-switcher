@@ -26,6 +26,10 @@ sealed class Profile
 
     [JsonIgnore]
     public string CodeConfigDir => Path.Combine(Folder, "claude-code");
+
+    /// <summary>The profile's tinted icon, used by its shortcuts and windows.</summary>
+    [JsonIgnore]
+    public string IconPath => Path.Combine(Settings.IconDir, Id + ".ico");
 }
 
 sealed class Settings
