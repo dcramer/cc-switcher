@@ -1,5 +1,11 @@
 import AppKit
 import SwiftUI
+import os
+
+let linkLog = Logger(subsystem: "com.cc-switcher.app", category: "links")
+
+/// A link with its query left out: OAuth callbacks carry codes.
+func redacted(_ url: URL) -> String { "\(url.scheme ?? "")://\(url.host ?? "")\(url.path)" }
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var store: Store!
@@ -65,6 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // MARK: Links
 
     func application(_ application: NSApplication, open urls: [URL]) {
+        linkLog.info("open urls: \(urls.map(redacted), privacy: .public) finishedLaunching=\(self.finishedLaunching, privacy: .public)")
         if !finishedLaunching && mainWindow == nil { startedForLink = true }
         for url in urls where url.scheme?.lowercased() == Claude.linkScheme {
             route(url)
@@ -74,7 +81,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func route(_ url: URL) {
         store.refresh()
         let running = store.profiles.filter { store.isRunning($0) }
-        if running.count == 1 {
+        let owner = LinkOwner.owner(of: url, among: store.profiles)
+        linkLog.info("route \(redacted(url), privacy: .public): running=\(running.map(\.id), privacy: .public) owner=\(owner?.id ?? "unknown", privacy: .public)")
+        if let owner, store.isRunning(owner) || !LinkOwner.isMcpSignIn(url) {
+            // A sign-in only completes in the Claude that started it, so never start one for it.
+            deliver(url, to: owner)
+        } else if running.count == 1 {
             deliver(url, to: running[0])
         } else {
             pick(for: url)
@@ -87,6 +99,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let picker = LinkPicker(store: store, kind: kind) { [weak self] profile in
             window.close()
             self?.pickerWindows.removeAll { $0 === window }
+            linkLog.info("picker chose \(profile?.id ?? "cancel", privacy: .public)")
             if let profile { self?.deliver(url, to: profile) } else { self?.quitIfOnlyForLink() }
         }
         window = NSPanel(contentRect: .zero, styleMask: [.titled, .closable], backing: .buffered, defer: false)
@@ -102,13 +115,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func deliver(_ url: URL, to profile: Profile) {
         let wasRunning = store.isRunning(profile)
+        linkLog.info("deliver \(redacted(url), privacy: .public) to \(profile.id, privacy: .public) wasRunning=\(wasRunning, privacy: .public)")
         store.launch(profile) { [weak self] app in
-            guard let app else { self?.quitIfOnlyForLink(); return }
+            guard let app else { linkLog.error("deliver: no Claude process for \(profile.id, privacy: .public)"); self?.quitIfOnlyForLink(); return }
             // A Claude that has just started needs a moment before it handles links.
             DispatchQueue.main.asyncAfter(deadline: .now() + (wasRunning ? 0 : 4)) {
                 do {
                     try Claude.open(url, in: app)
+                    linkLog.info("sent link to pid \(app.processIdentifier, privacy: .public)")
                 } catch {
+                    linkLog.error("sending link to pid \(app.processIdentifier, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
                     Store.showError(
                         "Couldn't send the link to \(profile.name)",
                         "\(error.localizedDescription)\n\nIf macOS asked whether CC Switcher may control Claude, allow it in System Settings → Privacy & Security → Automation.")

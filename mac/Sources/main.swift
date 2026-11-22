@@ -33,6 +33,12 @@ case "--profile", "launch":
     }
     dispatchMain()
 
+case "owner":
+    // Which profile a claude:// link would go to: `cc-switcher owner <link>`.
+    guard args.count > 1, let url = URL(string: args[1]) else { fail("usage: cc-switcher owner <claude://…>") }
+    print(LinkOwner.owner(of: url, among: loadSettings().profiles)?.id ?? "unknown (CC Switcher would ask)")
+    exit(0)
+
 case "list":
     for profile in loadSettings().profiles {
         let state = Claude.runningApp(for: profile) != nil ? "running" : profile.isNew ? "new" : ""
@@ -46,6 +52,7 @@ case "--help", "-h", "help":
     cc-switcher                     Open the profile list
     cc-switcher --profile <name>    Open Claude with that profile (or bring it forward)
     cc-switcher list                Show profiles and which are running
+    cc-switcher owner <claude://…>  Show which profile a link would open in
     """)
     exit(0)
 
