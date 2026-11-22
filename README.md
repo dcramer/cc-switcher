@@ -2,8 +2,8 @@
 
 # CC Switcher
 
-Run Claude Desktop under several accounts at once on Windows, such as work and personal, and
-tell their windows apart.
+Run Claude Desktop under several accounts at once on Windows or macOS, such as work and
+personal, and tell their windows apart.
 
 Unofficial, and not affiliated with Anthropic.
 
@@ -57,7 +57,51 @@ profile's sign-in data to the Recycle Bin.
 - Profiles are separated with a Chromium switch (`--user-data-dir`) that Claude doesn't
   document, so a future Claude version could stop honoring it.
 
-## Command line
+## macOS
+
+**CC Switcher.app** works like the Windows app: a window listing your profiles, with Launch,
+Add…, Edit… and Remove, and a switch that sends sign-in links to the right profile.
+
+Build and install it (needs Xcode or the Command Line Tools):
+
+```bash
+mac/build.sh --install
+```
+
+This puts **CC Switcher** in `~/Applications` (find it with Spotlight) and, if `~/.local/bin`
+exists, a `cc-switcher` command there. It uses the same `~/.cc-switcher` folder and
+`settings.json` as the Windows version.
+
+1. Open **CC Switcher**. **Personal** is Claude as it is today; **Work** is new.
+2. Click **Turn on** so sign-in links reach the profile that asked for them.
+3. Select **Work**, click **Launch**, and sign in with the other account. If more than one Claude
+   is open when a sign-in link comes back from the browser, CC Switcher asks which profile it's for.
+
+Good to know on macOS:
+
+- Each profile has its own sign-in, chats and Code tab sessions. Claude Code's own folder
+  (`~/.claude`: settings, skills, CLI history) is shared unless the profile's
+  **Also separate Claude Code settings and history** box is ticked.
+- A profile in a color other than Claude's own runs from its own copy of Claude.app, kept in the
+  profile's folder, with a custom icon in that color, so its Dock icon and app-switcher icon show
+  which profile it is. The copy is an APFS clone, so it takes no extra disk space, and it's
+  refreshed from `/Applications` whenever Claude updates.
+- Always open profiles through CC Switcher. Claude on macOS doesn't stop two copies from opening
+  the same profile, which could damage its data; CC Switcher brings an open profile forward
+  instead of starting it again.
+- Claude makes itself the `claude://` handler every time it starts, so CC Switcher takes links
+  back 15 seconds after it launches a profile.
+- The first link CC Switcher hands to Claude may make macOS ask whether CC Switcher may control
+  Claude. Allow it, or links can't reach the right profile.
+- The app is ad-hoc signed, not notarized, so it's meant to be built on the Mac that runs it.
+
+```
+cc-switcher                     Open the profile list
+cc-switcher --profile <name>    Open Claude with that profile
+cc-switcher list                Show profiles and which are running
+```
+
+## Command line (Windows)
 
 ```
 cc-switcher                     Open the profile list
@@ -66,7 +110,7 @@ cc-switcher --url <claude://…>  Open a Claude link in a profile
 cc-switcher --tray              Start in the notification area
 ```
 
-## Building
+## Building (Windows)
 
 Requires the .NET 9 SDK on Windows.
 
