@@ -64,7 +64,8 @@ from the releases page in a browser instead, macOS won't open it until you allow
    - **macOS:** click **Turn on**.
 3. Select **Work**, click **Launch**, and sign in with the other account. If more than one Claude
    is open when a sign-in link comes back from the browser, CC Switcher asks which profile it's
-   for.
+   for. On macOS, links that open a Code or Cowork session, and MCP sign-ins started from one,
+   go straight to the profile that has that session.
 
 **Add…** makes more profiles, and **Edit…** renames or recolors one. **Remove** moves a
 profile's sign-in data to the Recycle Bin or Trash. Your Claude account itself isn't affected.
@@ -107,6 +108,7 @@ cc-switcher --profile <name>    Open Claude with that profile
 cc-switcher --url <claude://…>  Open a Claude link in a profile (Windows)
 cc-switcher --tray              Start in the notification area (Windows)
 cc-switcher list                Show profiles and which are running (macOS)
+cc-switcher owner <claude://…>  Show which profile a link would open in (macOS)
 ```
 
 ## Building
