@@ -29,7 +29,9 @@ Unofficial, and not affiliated with Anthropic.
 
 ## Install
 
-Download `cc-switcher-setup.exe` from the
+On a Mac, see [macOS](#macos).
+
+On Windows, download `cc-switcher-setup.exe` from the
 [latest release](https://github.com/dcramer/cc-switcher/releases/latest) and run it. It installs
 for your user only, with no admin prompt. The installer isn't code-signed, so Windows
 SmartScreen asks you to confirm with **More info → Run anyway**.
@@ -62,15 +64,19 @@ profile's sign-in data to the Recycle Bin.
 **CC Switcher.app** works like the Windows app: a window listing your profiles, with Launch,
 Add…, Edit… and Remove, and a switch that sends sign-in links to the right profile.
 
-Build and install it (needs Xcode or the Command Line Tools):
+Install it by pasting this into Terminal:
 
 ```bash
-mac/build.sh --install
+curl -fsSL https://raw.githubusercontent.com/dcramer/cc-switcher/main/mac/install.sh | bash
 ```
 
-This puts **CC Switcher** in `~/Applications` (find it with Spotlight) and, if `~/.local/bin`
-exists, a `cc-switcher` command there. It uses the same `~/.cc-switcher` folder and
-`settings.json` as the Windows version.
+This puts **CC Switcher** in `~/Applications` (find it with Spotlight) and a `cc-switcher` command
+in `~/.local/bin`, then opens it. Run the same line again to update. It needs macOS 13 or later
+and uses the same `~/.cc-switcher` folder and `settings.json` as the Windows version.
+
+The app isn't signed with an Apple developer account, so if you download `cc-switcher-mac.zip`
+from the releases page in a browser instead, macOS won't open it until you allow it in
+**System Settings → Privacy & Security**. The install line above avoids that.
 
 1. Open **CC Switcher**. **Personal** is Claude as it is today; **Work** is new.
 2. Click **Turn on** so sign-in links reach the profile that asked for them.
@@ -93,7 +99,8 @@ Good to know on macOS:
   back 15 seconds after it launches a profile.
 - The first link CC Switcher hands to Claude may make macOS ask whether CC Switcher may control
   Claude. Allow it, or links can't reach the right profile.
-- The app is ad-hoc signed, not notarized, so it's meant to be built on the Mac that runs it.
+- To build it yourself instead (needs Xcode or the Command Line Tools), run
+  `mac/build.sh --install`.
 
 ```
 cc-switcher                     Open the profile list
@@ -120,6 +127,7 @@ powershell -ExecutionPolicy Bypass -File build.ps1 -Install
 
 This builds into `dist\` the same way releases are built and installs it for your user; without
 `-Install` it only builds. Every push to `main` is published as a release by `.github/workflows/build.yml`.
+The Mac app is added to a release afterwards from a Mac, with `mac/release.sh`.
 
 ## License
 

@@ -4,7 +4,8 @@
 set -euo pipefail
 
 cd "$(dirname "$0")"
-VERSION="0.2.0"
+# CI passes the release version; local builds are 0.0.0.
+VERSION="${VERSION:-0.0.0}"
 APP="dist/CC Switcher.app"
 MIN_MACOS="13.0"
 
